@@ -1,0 +1,34 @@
+{
+  "note": "동일 v2 전처리·holdout 10%. LGBM은 이전 베이스라인 학습 기록(동일 CSV). CNN-GRU는 참고 논문 구조·여주 미재학습.",
+  "holdout_period": "2025-10-19 ~ 2025-12-31",
+  "cnn_gru_2023": {
+    "label": "CNN-GRU (권혜수 2023, 참고)",
+    "spatial": "CNN 공간 + GRU 시간",
+    "input": "단일·다채널 시퀀스",
+    "params": "대형 (수 MB~)",
+    "nse_h36": null,
+    "rmse_h36_cm": null,
+    "inference": "GPU 권장"
+  },
+  "lgbm_baseline_v2": {
+    "label": "LightGBM Multi-Horizon (v2 베이스라인)",
+    "spatial": "없음 (72 flat 피처)",
+    "input": "시점 피처 + lag 12h",
+    "params": "~9 MB",
+    "nse_h36_scaled": 0.9896,
+    "nse_h6_scaled": 0.9978,
+    "rmse_h36_scaled": 0.0183,
+    "note": "자기 수위 lag 포함 시 NSE 과대 가능"
+  },
+  "hydro_mast_v2": {
+    "label": "Hydro-MAST (제안)",
+    "spatial": "17 HRFC DAG + 댐",
+    "input": "직전 12h 그래프 시퀀스",
+    "params": "~80 KB",
+    "nse_h36": 0.868,
+    "nse_h6": 0.924,
+    "rmse_h36_cm": 2.61,
+    "rmse_h6_cm": 1.98,
+    "inference_ms": 0.88
+  }
+}

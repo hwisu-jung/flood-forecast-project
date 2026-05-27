@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <title>실시간 홍수 예측 확인</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <style>
+    :root {
+      --bg:#f3f6fb;
+      --card:#ffffff;
+      --text:#111827;
+      --muted:#4b5563;
+      --line:#e5e7eb;
+      --blue:#2563eb;
+      --up:#dc2626;
+      --down:#059669;
+      --flat:#6b7280;
+    }
+    body { font-family: "Segoe UI", Arial, sans-serif; margin: 0; padding: 20px; background:var(--bg); color:var(--text); }
+    .wrap { max-width: 1100px; margin: 0 auto; }
+    .card { background:var(--card); border-radius:14px; padding:18px; margin-bottom:14px; box-shadow:0 1px 8px rgba(15,23,42,.08); }
+    h1 { margin:0 0 10px; font-size:24px; }
+    .sub { color:var(--muted); font-size:14px; }
+    .top-grid { display:grid; grid-template-columns: 1.2fr 1fr; gap:12px; }
+    .mini-grid { display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; }
+    .mini-card { border:1px solid var(--line); border-radius:10px; padding:12px; }
+    .mini-card.up { border-left:4px solid var(--up); }
+    .mini-card.down { border-left:4px solid var(--down); }
+    .mini-card.flat { border-left:4px solid var(--flat); }
+    .mini-title { font-size:13px; color:var(--muted); margin-bottom:5px; }
+    .mini-value { font-size:20px; font-weight:700; }
+    .mini-delta { margin-top:4px; font-size:13px; color:var(--muted); }
+    .chip { display:inline-block; padding:6px 10px; border-radius:999px; font-size:13px; font-weight:600; }
+    .chip.up { color:#fff; background:var(--up); }
+    .chip.down { color:#fff; background:var(--down); }
+    .chip.flat { color:#fff; background:var(--flat); }
+    .warn-box { border-radius:10px; padding:10px 12px; margin-top:10px; font-size:14px; line-height:1.5; }
+    .warn-ok { background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; }
+    .warn-has { background:#fffbeb; color:#92400e; border:1px solid #fde68a; }
+    .charts { display:grid; grid-template-columns: 2fr 1fr; gap:12px; }
+    table { border-collapse: collapse; width:100%; }
+    th, td { border-bottom:1px solid var(--line); padding:10px; text-align:left; font-size:14px; }
+    th { background:#f8fafc; }
+    .meta-line { font-size:14px; color:var(--muted); line-height:1.7; }
+    @media (max-width: 980px) {
+      .top-grid, .charts, .mini-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>실시간 홍수 예측 모니터</h1>
+      <div class="meta-line">
+        기준시각(KST): <b>2026-05-26 15:10</b> | 화면생성시각: 2026-05-26 15:14:48<br/>
+        데이터 소스: K-water=api_or_prev, HRFC=api_or_prev
+      </div>
+      <div style="margin-top:10px;"><span class="chip flat">6시간 기준 큰 변화 없음</span></div>
+      <div class="warn-box warn-ok"><b>알림</b><br/>현재 경고 없음</div>
+    </div>
+    <div class="card">
+      <div class="mini-grid">
+        
+            <div class="mini-card down">
+              <div class="mini-title">10분 후</div>
+              <div class="mini-value">33.1083 m</div>
+              <div class="mini-delta">↓ -0.0167 m</div>
+            </div>
+            
+            <div class="mini-card down">
+              <div class="mini-title">1시간 후</div>
+              <div class="mini-value">33.1144 m</div>
+              <div class="mini-delta">↓ -0.0106 m</div>
+            </div>
+            
+            <div class="mini-card down">
+              <div class="mini-title">3시간 후</div>
+              <div class="mini-value">33.1132 m</div>
+              <div class="mini-delta">↓ -0.0118 m</div>
+            </div>
+            
+            <div class="mini-card flat">
+              <div class="mini-title">6시간 후</div>
+              <div class="mini-value">33.1155 m</div>
+              <div class="mini-delta">→ -0.0095 m</div>
+            </div>
+            
+      </div>
+    </div>
+    <div class="card charts">
+      <div id="chart_level" style="height:390px;"></div>
+      <div id="chart_delta" style="height:390px;"></div>
+    </div>
+    <div class="card">
+      <table>
+        <thead><tr><th>구분</th><th>시각(KST)</th><th>수위(m)</th><th>현재 대비 변화</th></tr></thead>
+        <tbody>
+          <tr><td>현재</td><td>2026-05-26 15:10</td><td>33.1250</td><td>-</td></tr><tr><td>10분 후</td><td>2026-05-26 15:20</td><td>33.1083</td><td>-0.0167 m</td></tr><tr><td>1시간 후</td><td>2026-05-26 16:10</td><td>33.1144</td><td>-0.0106 m</td></tr><tr><td>3시간 후</td><td>2026-05-26 18:10</td><td>33.1132</td><td>-0.0118 m</td></tr><tr><td>6시간 후</td><td>2026-05-26 21:10</td><td>33.1155</td><td>-0.0095 m</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <script>
+    const labels = ["05-26 15:10", "05-26 15:20", "05-26 16:10", "05-26 18:10", "05-26 21:10"];
+    const values = [33.125, 33.10828399658203, 33.11439514160156, 33.11317443847656, 33.1154899597168];
+    const names = ["현재", "10분 후", "1시간 후", "3시간 후", "6시간 후"];
+    const markerColors = ["#111827", "#2563eb", "#2563eb", "#2563eb", "#2563eb"];
+    const deltaLabels = ["10분 후", "1시간 후", "3시간 후", "6시간 후"];
+    const deltas = [-0.01671600341796875, -0.0106048583984375, -0.0118255615234375, -0.009510040283203125];
+
+    const traceLevel = {
+      x: labels,
+      y: values,
+      mode: "lines+markers+text",
+      text: names,
+      textposition: "top center",
+      line: { width: 3, color: "#2563eb" },
+      marker: { size: 10, color: markerColors },
+      name: "수위"
+    };
+
+    const layoutLevel = {
+      title: "수위 예측 경로 (현재 -> 6시간 후)",
+      xaxis: { title: "시각(KST)" },
+      yaxis: { title: "수위(m)" },
+      margin: { l: 60, r: 20, t: 50, b: 60 },
+      paper_bgcolor: "white",
+      plot_bgcolor: "white"
+    };
+
+    const traceDelta = {
+      x: deltaLabels,
+      y: deltas,
+      type: "bar",
+      marker: {
+        color: deltas.map(v => v > 0.01 ? "#dc2626" : (v < -0.01 ? "#059669" : "#6b7280"))
+      },
+      text: deltas.map(v => (v >= 0 ? "+" : "") + v.toFixed(4) + " m"),
+      textposition: "auto",
+      name: "변화량"
+    };
+
+    const layoutDelta = {
+      title: "현재 대비 변화량",
+      xaxis: { title: "예측 시점" },
+      yaxis: { title: "변화량(m)", zeroline: true, zerolinecolor: "#9ca3af" },
+      margin: { l: 60, r: 20, t: 50, b: 60 },
+      paper_bgcolor: "white",
+      plot_bgcolor: "white"
+    };
+
+    Plotly.newPlot("chart_level", [traceLevel], layoutLevel, {responsive:true, displaylogo:false});
+    Plotly.newPlot("chart_delta", [traceDelta], layoutDelta, {responsive:true, displaylogo:false});
+  </script>
+</body>
+</html>

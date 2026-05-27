@@ -1,0 +1,26 @@
+{
+  "bucket_start_kst": "2026-05-26 15:40:00",
+  "predictions_m": {
+    "h1_pred_m": 33.1082878112793,
+    "h6_pred_m": 33.11444854736328,
+    "h18_pred_m": 33.11290740966797,
+    "h36_pred_m": 33.11505889892578
+  },
+  "meta": {
+    "bucket_start_kst": "2026-05-26 15:40:00",
+    "bucket_start_utc": "2026-05-26T06:40:00Z",
+    "requested_bucket_kst": "2026-05-26 15:40:00",
+    "generated_at_kst": "2026-05-26 15:43:12",
+    "kwater_latest_obs_kst": "2026-05-26 15:00:00",
+    "hrfc_latest_obs_kst": null,
+    "target_station_code": "1007639",
+    "target_station_name": "여주보 상류",
+    "target_variable": "수위(m)",
+    "prediction_scope": "지점 수위 예측(지역 평균 아님)",
+    "dam_level_usage": "댐 수위는 입력 피처로 사용, 직접 예측 대상은 아님",
+    "kwater_source": "api_or_prev",
+    "hrfc_source": "api_or_prev",
+    "current_level_m": 33.125,
+    "warnings": []
+  }
+}
