@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 import threading
 import time
 import webbrowser
@@ -18,12 +19,19 @@ from urllib.request import urlopen
 
 from flask import Flask, jsonify, request
 
+ROOT = Path(__file__).resolve().parent
+PROJECT = ROOT.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+for p in (PROJECT / "01_data_pipeline", PROJECT / "02_model_development"):
+    if str(p) not in sys.path:
+        sys.path.append(str(p))
+
 import realtime_pipeline_v2 as rp
 from config_v2 import HRFC_STATIONS
 from hydro_mast_data import HRFC_TOPO_ORDER
 
-ROOT = Path(__file__).resolve().parent
-DATA_DIR = ROOT / "data"
+DATA_DIR = PROJECT / "04_artifacts" / "data"
 JSON_PATH = DATA_DIR / "realtime_latest_prediction.json"
 
 app = Flask(__name__)
@@ -149,6 +157,31 @@ def _build_station_payload() -> list[dict]:
 def api_latest():
     try:
         payload = _get_latest_or_refresh()
+        return jsonify({"ok": True, "payload": payload})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.get("/api/health")
+def api_health():
+    required = {
+        "model": (rp.MODEL_DIR / "hydro_mast_v2.pt").exists(),
+        "feature_scaler": (rp.MODEL_DIR / "feature_scaler_v2.pkl").exists(),
+        "target_scaler": (rp.MODEL_DIR / "target_scaler_v2.pkl").exists(),
+        "train_csv": (rp.DATA_DIR / "features_v2_train.csv").exists(),
+        "test_csv": (rp.DATA_DIR / "features_v2_test.csv").exists(),
+    }
+    env_exists = (PROJECT / ".env").exists()
+    return jsonify({"ok": True, "status": "healthy", "env_exists": env_exists, "required_files": required})
+
+
+@app.post("/api/predict")
+def api_predict():
+    """평가자용 단일 추론 API."""
+    try:
+        body = request.get_json(silent=True) or {}
+        skip_api = bool(body.get("skip_api", True))
+        payload = _run_refresh(skip_api=skip_api)
         return jsonify({"ok": True, "payload": payload})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
@@ -472,14 +505,19 @@ def index():
       el("summaryCards").innerHTML = cards.join("");
       el("tb").innerHTML = rows.join("");
 
+      const levelX = names.slice();
+      const levelHover = labels.map((ts, i) => `${names[i]}<br>${ts}<br>${fmt(values[i])} m`);
       Plotly.newPlot("chart_level", [{
-        x: labels, y: values, mode: "lines+markers+text", text: names, textposition: "top center",
+        x: levelX, y: values, mode: "lines+markers+text", text: names, textposition: "top center",
         line: {width:3, color:"#2563eb"},
         marker: {size:10, color:names.map(n => n === "현재" ? "#111827" : "#2563eb")},
+        hovertemplate: "%{customdata}<extra></extra>",
+        customdata: levelHover,
         name: "수위"
       }], {
         title: "수위 예측 경로 (현재 -> 6시간 후)",
-        xaxis: {title: "시각(KST)"}, yaxis: {title: "수위(m)"},
+        xaxis: {title: "예측 시점", type: "category", categoryorder: "array", categoryarray: levelX},
+        yaxis: {title: "수위(m)", dtick: 0.01, tickformat: ".3f"},
         margin: {l:60,r:20,t:50,b:60}, paper_bgcolor:"#fff", plot_bgcolor:"#fff"
       }, {responsive:true, displaylogo:false});
 
