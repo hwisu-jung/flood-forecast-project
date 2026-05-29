@@ -13,6 +13,7 @@ import sys
 import threading
 import time
 import webbrowser
+from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 from pathlib import Path
 from urllib.request import urlopen
@@ -35,6 +36,22 @@ DATA_DIR = PROJECT / "04_artifacts" / "data"
 JSON_PATH = DATA_DIR / "realtime_latest_prediction.json"
 
 app = Flask(__name__)
+KST = timezone(timedelta(hours=9))
+
+
+def _parse_kst_dt(v: str | None) -> datetime | None:
+    if not v:
+        return None
+    s = str(v).strip()
+    if not s:
+        return None
+    # Accept both "YYYY-mm-dd HH:MM" and "YYYY-mm-dd HH:MM:SS"
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M"):
+        try:
+            return datetime.strptime(s, fmt).replace(tzinfo=KST)
+        except Exception:
+            continue
+    return None
 
 
 def _run_refresh(skip_api: bool = False) -> dict:
@@ -44,7 +61,23 @@ def _run_refresh(skip_api: bool = False) -> dict:
 
 def _get_latest_or_refresh() -> dict:
     if JSON_PATH.exists():
-        return json.loads(JSON_PATH.read_text(encoding="utf-8"))
+        payload = json.loads(JSON_PATH.read_text(encoding="utf-8"))
+        meta = payload.get("meta", {}) if isinstance(payload, dict) else {}
+        now_kst = datetime.now(KST)
+        ref_dt = _parse_kst_dt(meta.get("generated_at_kst")) or _parse_kst_dt(payload.get("bucket_start_kst"))
+
+        # Same-day and recent cache is OK.
+        # If stale, try realtime API refresh first; fallback to skip-api only on failure.
+        if ref_dt is not None and ref_dt.date() == now_kst.date() and (now_kst - ref_dt) <= timedelta(minutes=20):
+            return payload
+        try:
+            return _run_refresh(skip_api=False)
+        except Exception:
+            fallback_payload = _run_refresh(skip_api=True)
+            meta = fallback_payload.setdefault("meta", {})
+            warns = meta.setdefault("warnings", [])
+            warns.append("latest fallback: skip_api=true (realtime refresh failed)")
+            return fallback_payload
     return _run_refresh(skip_api=False)
 
 
@@ -327,7 +360,7 @@ def index():
     </div>
     <div class="card">
       <table>
-        <thead><tr><th>구분</th><th>시각(KST)</th><th>수위(m)</th><th>현재 대비 변화</th></tr></thead>
+        <thead><tr><th>예측 시각(KST)</th><th>남은 시간</th><th>수위(m)</th><th>현재 대비 변화</th></tr></thead>
         <tbody id="tb"></tbody>
       </table>
     </div>
@@ -447,9 +480,10 @@ def index():
       const generated = meta.generated_at_kst || "-";
       const kwObs = meta.kwater_latest_obs_kst || "-";
       const hrObs = meta.hrfc_latest_obs_kst || "-";
+      const modeLabel = (meta.mode === "skip_api") ? "테스트 모드(skip_api)" : "실시간 API 모드";
       el("meta").innerHTML =
         `요청시각(KST): <b>${requested}</b> | 기준버킷(KST): <b>${payload.bucket_start_kst}</b><br/>` +
-        `생성시각: ${generated} | 화면시각: ${nowStr()}<br/>` +
+        `생성시각: ${generated} | 화면시각: ${nowStr()} | 실행모드: <b>${modeLabel}</b><br/>` +
         `최신 실측시각: K-water=${kwObs}, HRFC=${hrObs}<br/>` +
         `데이터 소스: K-water=${meta.kwater_source || "-"}, HRFC=${meta.hrfc_source || "-"}`;
 
@@ -482,7 +516,7 @@ def index():
         labels.push(payload.bucket_start_kst.slice(5,16));
         values.push(current);
         names.push("현재");
-        rows.push(`<tr><td>현재</td><td>${payload.bucket_start_kst}</td><td>${fmt(current)}</td><td>-</td></tr>`);
+        rows.push(`<tr><td>${payload.bucket_start_kst} (현재)</td><td>지금</td><td>${fmt(current)}</td><td>-</td></tr>`);
       }
       for (const k of ORDER) {
         if (preds[k] == null) continue;
@@ -495,17 +529,17 @@ def index():
         if (d != null && d > 0.01) { cls = "up"; icon = "↑"; }
         else if (d != null && d < -0.01) { cls = "down"; icon = "↓"; }
         cards.push(`<div class="mini-card ${cls}"><div class="mini-title">${H_LABELS[k]}</div><div class="mini-value">${fmt(pred)} m</div><div class="mini-delta">${icon} ${dTxt}</div></div>`);
-        rows.push(`<tr><td>${H_LABELS[k]}</td><td>${tK}</td><td>${fmt(pred)}</td><td>${dTxt}</td></tr>`);
+        rows.push(`<tr><td>${tK}</td><td>${H_LABELS[k]}</td><td>${fmt(pred)}</td><td>${dTxt}</td></tr>`);
         labels.push(`${String(t.getMonth()+1).padStart(2,"0")}-${String(t.getDate()).padStart(2,"0")} ${String(t.getHours()).padStart(2,"0")}:${String(t.getMinutes()).padStart(2,"0")}`);
         values.push(pred);
         names.push(H_LABELS[k]);
-        dlabels.push(H_LABELS[k]);
+        dlabels.push(`${String(t.getHours()).padStart(2,"0")}:${String(t.getMinutes()).padStart(2,"0")}`);
         deltas.push(d == null ? 0 : d);
       }
       el("summaryCards").innerHTML = cards.join("");
       el("tb").innerHTML = rows.join("");
 
-      const levelX = names.slice();
+      const levelX = labels.slice();
       const levelHover = labels.map((ts, i) => `${names[i]}<br>${ts}<br>${fmt(values[i])} m`);
       Plotly.newPlot("chart_level", [{
         x: levelX, y: values, mode: "lines+markers+text", text: names, textposition: "top center",
